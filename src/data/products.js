@@ -1,5 +1,3 @@
-// Legacy static sample — catalog is loaded from GET /api/v1/catalog (see db/seeds/catalog.rb).
-
 export const productsByTier = {
   premium: [
     {

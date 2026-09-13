@@ -1,72 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import CategorySwitcher from './components/CategorySwitcher';
 import ProductGrid from './components/ProductGrid';
 import BespokeSection from './components/BespokeSection';
-import LoginModal from './components/LoginModal';
-import { fetchCatalog, fetchCurrentUser, setStoredToken } from './api/client';
+import { productsByTier } from './data/products';
 import './dermatics.css';
 
 export default function App() {
-  const [categories, setCategories] = useState([]);
-  const [activeTab, setActiveTab] = useState(null);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-  const [catalogError, setCatalogError] = useState('');
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { categories: loaded } = await fetchCatalog();
-        if (cancelled) return;
-        setCategories(loaded);
-        setActiveTab((current) => current ?? loaded[0]?.slug ?? null);
-      } catch (err) {
-        if (!cancelled) setCatalogError(err.message || 'Could not load catalog');
-      } finally {
-        if (!cancelled) setCatalogLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const current = await fetchCurrentUser();
-        if (!cancelled) setUser(current);
-      } catch {
-        if (!cancelled) setUser(null);
-      } finally {
-        if (!cancelled) setAuthLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleAuthSuccess = (authenticatedUser, token) => {
-    setStoredToken(token);
-    setUser(authenticatedUser);
-  };
-
-  const handleSignOut = () => {
-    setStoredToken(null);
-    setUser(null);
-  };
-
-  const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Account';
-  const activeCategory = categories.find((category) => category.slug === activeTab);
+  const [activeTab, setActiveTab] = useState('premium');
 
   return (
     <>
@@ -75,80 +15,39 @@ export default function App() {
       <header>
         <a href="#" className="brand-logo">DERMATICS</a>
         <div className="header-contact">
-          {!authLoading && (
-            user ? (
-              <div className="header-auth">
-                <span className="header-user">
-                  Hello, {displayName}
-                  {user.admin && <span className="role-badge role-badge--admin">Admin</span>}
-                </span>
-                <button type="button" className="btn-login" onClick={handleSignOut}>
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <button type="button" className="btn-login" onClick={() => setLoginOpen(true)}>
-                Login
-              </button>
-            )
-          )}
           <a href="tel:+919876543210" className="btn-contact">
             Book Appointment: +91 98765 43210
           </a>
         </div>
       </header>
 
-      <LoginModal
-        open={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onSuccess={handleAuthSuccess}
-      />
+      <CategorySwitcher activeTab={activeTab} onChange={setActiveTab} />
 
-      {catalogLoading && (
-        <p className="catalog-status" role="status">
-          Loading collection…
-        </p>
-      )}
+      <main className="content-viewport">
+        <div className={`tab-view${activeTab === 'premium' ? ' active-view' : ''}`}>
+          {activeTab === 'premium' && (
+            <ProductGrid
+              heading="The Universal Essentials"
+              description="Expertly formulated with pure bio-actives for all skin types. Timeless protection and radiant balance."
+              products={productsByTier.premium}
+            />
+          )}
+        </div>
 
-      {catalogError && (
-        <p className="catalog-status catalog-status--error" role="alert">
-          {catalogError}. Start the Rails API and run <code>bin/rails db:seed</code>.
-        </p>
-      )}
+        <div className={`tab-view${activeTab === 'ultra' ? ' active-view' : ''}`}>
+          {activeTab === 'ultra' && (
+            <ProductGrid
+              heading="Precision Longevity"
+              description="Targeted regenerative solutions crafted exclusively for cellular aging, structural laxity, and complex dermal needs."
+              products={productsByTier.ultra}
+            />
+          )}
+        </div>
 
-      {!catalogLoading && !catalogError && categories.length > 0 && (
-        <>
-          <CategorySwitcher
-            categories={categories}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-          />
-
-          <main className="content-viewport">
-            {categories.map((category) => (
-              <div
-                key={category.slug}
-                className={`tab-view${activeTab === category.slug ? ' active-view' : ''}`}
-              >
-                {activeTab === category.slug && category.layout === 'product_grid' && (
-                  <ProductGrid
-                    heading={category.heading}
-                    description={category.description}
-                    products={category.products ?? []}
-                  />
-                )}
-                {activeTab === category.slug && category.layout === 'bespoke' && (
-                  <BespokeSection contentBlocks={category.content_blocks ?? []} />
-                )}
-              </div>
-            ))}
-          </main>
-        </>
-      )}
-
-      {!catalogLoading && !catalogError && activeCategory && categories.length === 0 && (
-        <p className="catalog-status">No categories published yet.</p>
-      )}
+        <div className={`tab-view${activeTab === 'super' ? ' active-view' : ''}`}>
+          {activeTab === 'super' && <BespokeSection />}
+        </div>
+      </main>
 
       <footer>
         <div className="footer-cta">
